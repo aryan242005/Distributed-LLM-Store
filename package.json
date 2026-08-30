@@ -1,0 +1,39 @@
+{
+  "name": "distributed-model-repository",
+  "version": "1.0.0",
+  "description": "Distributed Model Repository and LLM Weight Storage with Replication System",
+  "main": "backend/src/api/server.js",
+  "scripts": {
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "start": "node scripts/start-local.js",
+    "seed": "node scripts/seed-sample-model.js",
+    "stop": "node scripts/stop-local.js",
+    "test:system": "node scripts/test-system.js",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down -v"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.10.8",
+    "@grpc/proto-loader": "^0.7.13",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "nats": "^2.28.2",
+    "pg": "^8.12.0",
+    "uuid": "^10.0.0"
+  },
+  "keywords": [
+    "distributed-systems",
+    "grpc",
+    "nats",
+    "postgresql",
+    "replication",
+    "llm-storage",
+    "react",
+    "vite",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT"
+}

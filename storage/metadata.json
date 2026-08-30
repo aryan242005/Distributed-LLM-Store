@@ -1,0 +1,173 @@
+{
+  "models": [
+    [
+      "befb1956-c06d-48ad-8f57-b7755aa72a3e",
+      {
+        "id": "befb1956-c06d-48ad-8f57-b7755aa72a3e",
+        "name": "TinyLlama-v1",
+        "version": "1.0.0",
+        "filename": "TinyLlama-v1.bin",
+        "size_bytes": 2097152,
+        "checksum": "6cb5c3ec8a8382a3feef9a491261e83e77305b5cdc4437c20b59a03185c2a8d2",
+        "replication_factor": 3,
+        "primary_node_id": "node-1",
+        "description": "Discovered from local storage nodes",
+        "status": "READY",
+        "created_at": "2026-08-30T16:04:19.574Z",
+        "updated_at": "2026-08-30T16:06:37.356Z"
+      }
+    ],
+    [
+      "d0c07aca-0162-419c-80e3-fd7c296c6b26",
+      {
+        "id": "d0c07aca-0162-419c-80e3-fd7c296c6b26",
+        "name": "TinyLlama-1.1B-Q4-test",
+        "version": "1.0.0",
+        "filename": "TinyLlama-1.1B-Q4-test.bin",
+        "size_bytes": 5242880,
+        "checksum": "1bde706ddf1979805f9d82d7b8ad60e9512630b440f7fd315c08361d9300db0c",
+        "replication_factor": 3,
+        "primary_node_id": "node-1",
+        "description": "Discovered from local storage nodes",
+        "status": "READY",
+        "created_at": "2026-08-30T15:58:45.046Z",
+        "updated_at": "2026-08-30T16:06:37.366Z"
+      }
+    ]
+  ],
+  "storage_nodes": [
+    [
+      "node-1",
+      {
+        "id": "node-1",
+        "host": "localhost",
+        "port": 5001,
+        "status": "ONLINE",
+        "total_storage_bytes": 107374182400,
+        "used_storage_bytes": 7340032,
+        "available_storage_bytes": 107366842368,
+        "stored_models_count": 2,
+        "last_heartbeat": "2026-08-30T16:06:37.346Z",
+        "created_at": "2026-08-30T16:06:37.347Z"
+      }
+    ],
+    [
+      "node-2",
+      {
+        "id": "node-2",
+        "host": "localhost",
+        "port": 5002,
+        "status": "ONLINE",
+        "total_storage_bytes": 107374182400,
+        "used_storage_bytes": 7340032,
+        "available_storage_bytes": 107366842368,
+        "stored_models_count": 2,
+        "last_heartbeat": "2026-08-30T16:06:37.347Z",
+        "created_at": "2026-08-30T16:06:37.347Z"
+      }
+    ],
+    [
+      "node-3",
+      {
+        "id": "node-3",
+        "host": "localhost",
+        "port": 5003,
+        "status": "ONLINE",
+        "total_storage_bytes": 107374182400,
+        "used_storage_bytes": 7340032,
+        "available_storage_bytes": 107366842368,
+        "stored_models_count": 2,
+        "last_heartbeat": "2026-08-30T16:06:37.347Z",
+        "created_at": "2026-08-30T16:06:37.347Z"
+      }
+    ]
+  ],
+  "replicas": [
+    [
+      "befb1956-c06d-48ad-8f57-b7755aa72a3e_node-1",
+      {
+        "id": "befb1956-c06d-48ad-8f57-b7755aa72a3e_node-1",
+        "model_id": "befb1956-c06d-48ad-8f57-b7755aa72a3e",
+        "node_id": "node-1",
+        "role": "PRIMARY",
+        "status": "SYNCED",
+        "checksum": "6cb5c3ec8a8382a3feef9a491261e83e77305b5cdc4437c20b59a03185c2a8d2",
+        "size_bytes": 2097152,
+        "synced_at": "2026-08-30T16:06:37.356Z",
+        "created_at": "2026-08-30T16:06:37.356Z"
+      }
+    ],
+    [
+      "d0c07aca-0162-419c-80e3-fd7c296c6b26_node-1",
+      {
+        "id": "d0c07aca-0162-419c-80e3-fd7c296c6b26_node-1",
+        "model_id": "d0c07aca-0162-419c-80e3-fd7c296c6b26",
+        "node_id": "node-1",
+        "role": "PRIMARY",
+        "status": "SYNCED",
+        "checksum": "1bde706ddf1979805f9d82d7b8ad60e9512630b440f7fd315c08361d9300db0c",
+        "size_bytes": 5242880,
+        "synced_at": "2026-08-30T16:06:37.366Z",
+        "created_at": "2026-08-30T16:06:37.366Z"
+      }
+    ],
+    [
+      "befb1956-c06d-48ad-8f57-b7755aa72a3e_node-2",
+      {
+        "id": "befb1956-c06d-48ad-8f57-b7755aa72a3e_node-2",
+        "model_id": "befb1956-c06d-48ad-8f57-b7755aa72a3e",
+        "node_id": "node-2",
+        "role": "REPLICA",
+        "status": "SYNCED",
+        "checksum": "6cb5c3ec8a8382a3feef9a491261e83e77305b5cdc4437c20b59a03185c2a8d2",
+        "size_bytes": 2097152,
+        "synced_at": "2026-08-30T16:06:37.366Z",
+        "created_at": "2026-08-30T16:06:37.366Z"
+      }
+    ],
+    [
+      "d0c07aca-0162-419c-80e3-fd7c296c6b26_node-2",
+      {
+        "id": "d0c07aca-0162-419c-80e3-fd7c296c6b26_node-2",
+        "model_id": "d0c07aca-0162-419c-80e3-fd7c296c6b26",
+        "node_id": "node-2",
+        "role": "REPLICA",
+        "status": "SYNCED",
+        "checksum": "1bde706ddf1979805f9d82d7b8ad60e9512630b440f7fd315c08361d9300db0c",
+        "size_bytes": 5242880,
+        "synced_at": "2026-08-30T16:06:37.367Z",
+        "created_at": "2026-08-30T16:06:37.367Z"
+      }
+    ],
+    [
+      "befb1956-c06d-48ad-8f57-b7755aa72a3e_node-3",
+      {
+        "id": "befb1956-c06d-48ad-8f57-b7755aa72a3e_node-3",
+        "model_id": "befb1956-c06d-48ad-8f57-b7755aa72a3e",
+        "node_id": "node-3",
+        "role": "REPLICA",
+        "status": "SYNCED",
+        "checksum": "6cb5c3ec8a8382a3feef9a491261e83e77305b5cdc4437c20b59a03185c2a8d2",
+        "size_bytes": 2097152,
+        "synced_at": "2026-08-30T16:06:37.367Z",
+        "created_at": "2026-08-30T16:06:37.367Z"
+      }
+    ],
+    [
+      "d0c07aca-0162-419c-80e3-fd7c296c6b26_node-3",
+      {
+        "id": "d0c07aca-0162-419c-80e3-fd7c296c6b26_node-3",
+        "model_id": "d0c07aca-0162-419c-80e3-fd7c296c6b26",
+        "node_id": "node-3",
+        "role": "REPLICA",
+        "status": "SYNCED",
+        "checksum": "1bde706ddf1979805f9d82d7b8ad60e9512630b440f7fd315c08361d9300db0c",
+        "size_bytes": 5242880,
+        "synced_at": "2026-08-30T16:06:37.367Z",
+        "created_at": "2026-08-30T16:06:37.367Z"
+      }
+    ]
+  ],
+  "system_events": [],
+  "communication_logs": []
+}

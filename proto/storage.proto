@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package storage;
+
+service StorageService {
+  // Client streaming: Coordinator or Node streams chunks to store a model
+  rpc StoreChunkStream (stream Chunk) returns (StoreResponse);
+
+  // Server streaming: Node streams chunks back to Coordinator for download
+  rpc RetrieveChunkStream (RetrieveRequest) returns (stream Chunk);
+
+  // Unary: Coordinator instructs Node A to replicate model to Node B (P2P)
+  rpc ReplicateToNode (ReplicateRequest) returns (ReplicateResponse);
+
+  // Node health and metrics
+  rpc GetStatus (StatusRequest) returns (NodeStatusResponse);
+
+  // Delete physical model file from storage
+  rpc DeleteModelFile (DeleteRequest) returns (DeleteResponse);
+
+  // Heartbeat / ping
+  rpc HealthCheck (PingRequest) returns (PingResponse);
+}
+
+message Chunk {
+  string modelId = 1;
+  string filename = 2;
+  int64 chunkIndex = 3;
+  int64 totalChunks = 4;
+  bytes data = 5;
+  string checksum = 6;
+  int64 totalSize = 7;
+}
+
+message StoreResponse {
+  bool success = 1;
+  string message = 2;
+  string modelId = 3;
+  string filename = 4;
+  string checksum = 5;
+  int64 bytesWritten = 6;
+}
+
+message RetrieveRequest {
+  string modelId = 1;
+  string filename = 2;
+}
+
+message ReplicateRequest {
+  string modelId = 1;
+  string filename = 2;
+  string targetNodeId = 3;
+  string targetNodeAddress = 4; // e.g. "localhost" or "storage-node-2"
+  int32 targetNodePort = 5;     // e.g. 5002
+}
+
+message ReplicateResponse {
+  bool success = 1;
+  string message = 2;
+  int64 bytesReplicated = 3;
+  string checksum = 4;
+  string sourceNodeId = 5;
+  string targetNodeId = 6;
+}
+
+message StatusRequest {
+  string query = 1;
+}
+
+message NodeStatusResponse {
+  string nodeId = 1;
+  string status = 2; // ONLINE, BUSY, OFFLINE
+  int64 totalStorageBytes = 3;
+  int64 usedStorageBytes = 4;
+  int64 availableStorageBytes = 5;
+  int32 storedModelsCount = 6;
+  int64 uptimeSeconds = 7;
+  repeated string storedModelIds = 8;
+}
+
+message DeleteRequest {
+  string modelId = 1;
+  string filename = 2;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message PingRequest {
+  string timestamp = 1;
+  string senderId = 2;
+}
+
+message PingResponse {
+  string timestamp = 1;
+  string nodeId = 2;
+  string status = 3;
+}

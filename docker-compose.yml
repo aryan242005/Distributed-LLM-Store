@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dmr-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: model_repo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: dmr-nats
+    restart: always
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/varz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  coordinator:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: dmr-coordinator
+    restart: always
+    command: ["node", "src/api/server.js"]
+    ports:
+      - "4000:4000"
+    environment:
+      - COORDINATOR_PORT=4000
+      - COORDINATOR_HOST=0.0.0.0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/model_repo
+      - NATS_URL=nats://nats:4222
+      - NODE_1_HOST=storage-node-1
+      - NODE_1_PORT=5001
+      - NODE_2_HOST=storage-node-2
+      - NODE_2_PORT=5002
+      - NODE_3_HOST=storage-node-3
+      - NODE_3_PORT=5003
+      - DEFAULT_REPLICATION_FACTOR=3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  storage-node-1:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: dmr-storage-node-1
+    restart: always
+    command: ["node", "src/storage/index.js"]
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ID=node-1
+      - NODE_PORT=5001
+      - NODE_HOST=0.0.0.0
+      - NODE_ADDRESS=storage-node-1
+      - STORAGE_PATH=/data
+      - NATS_URL=nats://nats:4222
+      - COORDINATOR_URL=http://coordinator:4000
+    volumes:
+      - ./storage/node-1:/data
+    depends_on:
+      - nats
+
+  storage-node-2:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: dmr-storage-node-2
+    restart: always
+    command: ["node", "src/storage/index.js"]
+    ports:
+      - "5002:5002"
+    environment:
+      - NODE_ID=node-2
+      - NODE_PORT=5002
+      - NODE_HOST=0.0.0.0
+      - NODE_ADDRESS=storage-node-2
+      - STORAGE_PATH=/data
+      - NATS_URL=nats://nats:4222
+      - COORDINATOR_URL=http://coordinator:4000
+    volumes:
+      - ./storage/node-2:/data
+    depends_on:
+      - nats
+
+  storage-node-3:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: dmr-storage-node-3
+    restart: always
+    command: ["node", "src/storage/index.js"]
+    ports:
+      - "5003:5003"
+    environment:
+      - NODE_ID=node-3
+      - NODE_PORT=5003
+      - NODE_HOST=0.0.0.0
+      - NODE_ADDRESS=storage-node-3
+      - STORAGE_PATH=/data
+      - NATS_URL=nats://nats:4222
+      - COORDINATOR_URL=http://coordinator:4000
+    volumes:
+      - ./storage/node-3:/data
+    depends_on:
+      - nats
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: dmr-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
+    depends_on:
+      - coordinator
+
+volumes:
+  pgdata:
