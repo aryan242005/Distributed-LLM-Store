@@ -2,6 +2,7 @@ const GrpcClient = require('../communication/grpc/grpcClient');
 const Replica = require('../database/models/Replica');
 const StorageNode = require('../database/models/StorageNode');
 const DistributedLogger = require('../communication/logger');
+const NodeSelector = require('../coordinator/nodeSelector');
 
 class ReplicationManager {
   /**
@@ -20,10 +21,12 @@ class ReplicationManager {
     });
 
     const primaryAddress = `${primaryNode.host}:${primaryNode.port}`;
-    const replicationResults = [];
 
-    // 2. Perform P2P gRPC replication in parallel across all target replica nodes
-    for (const targetNode of targetNodes) {
+    // 2. Perform P2P gRPC replication to every target node concurrently
+    // (previously this awaited one target at a time, so N replicas took
+    // N times as long as one; the primary node can serve independent
+    // gRPC streams to each target in parallel).
+    const replicationResults = await Promise.all(targetNodes.map(async (targetNode) => {
       try {
         // Create initial SYNCING replica record in DB
         await Replica.create({
@@ -67,17 +70,21 @@ class ReplicationManager {
             sizeBytes: response.bytesReplicated || model.size_bytes,
           });
 
-          // Refresh target node storage metrics
+          // Refresh target node storage metrics, then release its
+          // placement reservation now the real counters reflect this replica.
           try {
             const status = await GrpcClient.getNodeStatus(`${targetNode.host}:${targetNode.port}`);
             await StorageNode.updateStorageStats(targetNode.id, parseInt(status.usedStorageBytes, 10), parseInt(status.totalStorageBytes, 10), status.storedModelsCount);
-          } catch (e) {}
+          } catch (e) {
+          } finally {
+            NodeSelector.releaseReservation(targetNode.id);
+          }
 
-          replicationResults.push({
+          return {
             nodeId: targetNode.id,
             status: 'SYNCED',
             bytesReplicated: response.bytesReplicated,
-          });
+          };
         } else {
           throw new Error(response.message || 'Replication failed');
         }
@@ -91,14 +98,15 @@ class ReplicationManager {
           checksum: '',
           sizeBytes: 0,
         });
+        NodeSelector.releaseReservation(targetNode.id);
 
-        replicationResults.push({
+        return {
           nodeId: targetNode.id,
           status: 'FAILED',
           error: err.message,
-        });
+        };
       }
-    }
+    }));
 
     // 3. Emit REPLICATION_COMPLETED event
     const successCount = replicationResults.filter(r => r.status === 'SYNCED').length;
