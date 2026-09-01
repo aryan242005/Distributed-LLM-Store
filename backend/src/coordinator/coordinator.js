@@ -11,6 +11,7 @@ const ChecksumUtil = require('../storage/checksum');
 const ChunkManager = require('../storage/chunkManager');
 const natsClient = require('../communication/nats/natsClient');
 const config = require('../config/config');
+const { rwLock } = require('../utils/concurrency');
 
 class CoordinatorService {
   constructor() {
@@ -170,11 +171,15 @@ class CoordinatorService {
       sizeBytes: bytesWritten,
     });
 
-    // Update primary node storage stats in DB
+    // Update primary node storage stats in DB, then release its placement
+    // reservation now that the real counters reflect this upload.
     try {
       const status = await GrpcClient.getNodeStatus(primaryAddress);
       await StorageNode.updateStorageStats(primaryNode.id, parseInt(status.usedStorageBytes, 10), parseInt(status.totalStorageBytes, 10), status.storedModelsCount);
-    } catch (e) {}
+    } catch (e) {
+    } finally {
+      NodeSelector.releaseReservation(primaryNode.id);
+    }
 
     // 5. Emit MODEL_UPLOADED event over NATS
     await DistributedLogger.logEvent('MODEL_UPLOADED', 'Coordinator', {
@@ -188,13 +193,16 @@ class CoordinatorService {
       replicationFactor: actualRepFactor,
     });
 
-    // 6. Asynchronously trigger peer-to-peer replication across target nodes
+    // 6. Asynchronously trigger peer-to-peer replication across target nodes.
+    // Held under this model's write lock so a concurrent deleteModel() call
+    // for the same modelId cannot remove the model/replica records while
+    // replication is still mutating them (and vice versa).
     if (targetReplicaNodes.length > 0) {
-      ReplicationManager.replicateModel({
+      rwLock.withWriteLock(modelId, () => ReplicationManager.replicateModel({
         model: savedModel,
         primaryNode,
         targetNodes: targetReplicaNodes,
-      }).catch(err => console.error('[Coordinator] Background replication error:', err));
+      })).catch(err => console.error('[Coordinator] Background replication error:', err));
     }
 
     return {
@@ -210,82 +218,94 @@ class CoordinatorService {
    * Retrieves a download stream for a model from an active replica storage node.
    */
   async downloadModel(modelId) {
-    const model = await Model.getById(modelId);
-    if (!model) {
-      throw new Error(`Model not found: ${modelId}`);
-    }
+    // Shared/read lock: any number of concurrent downloads of the same
+    // model may proceed together, but they queue behind (and block) an
+    // exclusive delete/replication write lock on this modelId, so a
+    // download can never be routed to a node mid-delete.
+    return rwLock.withReadLock(modelId, async () => {
+      const model = await Model.getById(modelId);
+      if (!model) {
+        throw new Error(`Model not found: ${modelId}`);
+      }
 
-    // 1. Select node holding replica
-    const { node, replica } = await RequestRouter.routeDownload(modelId);
-    const nodeAddress = `${node.host}:${node.port}`;
+      // 1. Select node holding replica
+      const { node, replica } = await RequestRouter.routeDownload(modelId);
+      const nodeAddress = `${node.host}:${node.port}`;
 
-    console.log(`[Coordinator] Serving download of model "${model.name}" from node ${node.id || node.host} (${nodeAddress})`);
+      console.log(`[Coordinator] Serving download of model "${model.name}" from node ${node.id || node.host} (${nodeAddress})`);
 
-    await DistributedLogger.logComm({
-      source: 'Coordinator',
-      target: node.id || nodeAddress,
-      protocol: 'gRPC',
-      operation: 'GET_MODEL',
-      status: 'SUCCESS',
-      details: `Streaming download of ${model.filename} (${model.size_bytes} bytes)`,
+      await DistributedLogger.logComm({
+        source: 'Coordinator',
+        target: node.id || nodeAddress,
+        protocol: 'gRPC',
+        operation: 'GET_MODEL',
+        status: 'SUCCESS',
+        details: `Streaming download of ${model.filename} (${model.size_bytes} bytes)`,
+      });
+
+      // 2. Open gRPC retrieval stream
+      const grpcStream = GrpcClient.createRetrieveStream(nodeAddress, modelId, model.filename);
+
+      return {
+        model,
+        servingNode: node.id || node.host,
+        grpcStream,
+      };
     });
-
-    // 2. Open gRPC retrieval stream
-    const grpcStream = GrpcClient.createRetrieveStream(nodeAddress, modelId, model.filename);
-
-    return {
-      model,
-      servingNode: node.id || node.host,
-      grpcStream,
-    };
   }
 
   /**
    * Deletes a model from all storage nodes and database.
    */
   async deleteModel(modelId) {
-    const model = await Model.getById(modelId);
-    if (!model) {
-      throw new Error(`Model not found: ${modelId}`);
-    }
+    // Exclusive/write lock: waits for any in-flight downloads or
+    // replication on this modelId to finish, and blocks new downloads
+    // from starting until the delete completes - preventing a download
+    // from being routed to a node whose file is being removed mid-request.
+    return rwLock.withWriteLock(modelId, async () => {
+      const model = await Model.getById(modelId);
+      if (!model) {
+        throw new Error(`Model not found: ${modelId}`);
+      }
 
-    const replicas = await Replica.getByModelId(modelId);
-    const allNodes = await StorageNode.getAll();
-    const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+      const replicas = await Replica.getByModelId(modelId);
+      const allNodes = await StorageNode.getAll();
+      const nodeMap = new Map(allNodes.map(n => [n.id, n]));
 
-    console.log(`[Coordinator] Deleting model "${model.name}" (${modelId}) across ${replicas.length} nodes...`);
+      console.log(`[Coordinator] Deleting model "${model.name}" (${modelId}) across ${replicas.length} nodes...`);
 
-    for (const rep of replicas) {
-      const node = nodeMap.get(rep.node_id);
-      if (node) {
-        const address = `${node.host}:${node.port}`;
-        try {
-          await GrpcClient.deleteModelFile(address, modelId, model.filename);
-          await DistributedLogger.logComm({
-            source: 'Coordinator',
-            target: node.id,
-            protocol: 'gRPC',
-            operation: 'DELETE_MODEL',
-            status: 'SUCCESS',
-            details: `Deleted ${model.filename} from ${node.id}`,
-          });
-        } catch (err) {
-          console.warn(`[Coordinator] Failed to delete from node ${node.id}:`, err.message);
+      for (const rep of replicas) {
+        const node = nodeMap.get(rep.node_id);
+        if (node) {
+          const address = `${node.host}:${node.port}`;
+          try {
+            await GrpcClient.deleteModelFile(address, modelId, model.filename);
+            await DistributedLogger.logComm({
+              source: 'Coordinator',
+              target: node.id,
+              protocol: 'gRPC',
+              operation: 'DELETE_MODEL',
+              status: 'SUCCESS',
+              details: `Deleted ${model.filename} from ${node.id}`,
+            });
+          } catch (err) {
+            console.warn(`[Coordinator] Failed to delete from node ${node.id}:`, err.message);
+          }
         }
       }
-    }
 
-    // Delete database records
-    await Model.delete(modelId);
+      // Delete database records
+      await Model.delete(modelId);
 
-    // Emit event
-    await DistributedLogger.logEvent('MODEL_DELETED', 'Coordinator', {
-      modelId,
-      name: model.name,
-      filename: model.filename,
+      // Emit event
+      await DistributedLogger.logEvent('MODEL_DELETED', 'Coordinator', {
+        modelId,
+        name: model.name,
+        filename: model.filename,
+      });
+
+      return true;
     });
-
-    return true;
   }
 }
 
