@@ -57,6 +57,47 @@ A production-grade distributed file storage and replication system for large Mac
    - NATS event bus publishes and subscribes to system lifecycle events (`NODE_REGISTERED`, `NODE_STATUS_UPDATED`, `MODEL_UPLOADED`, `REPLICATION_STARTED`, `REPLICATION_COMPLETED`).
 7. **Distributed Communication Trace Inspector**:
    - All inter-service gRPC RPCs and NATS events are logged and visualized in real time on the frontend Requests & Logs page.
+8. **Concurrency Control**:
+   - A keyed mutex (`backend/src/utils/concurrency.js`) serializes node-placement decisions so concurrent uploads can't race onto the same "least loaded" node before real storage stats update (`backend/src/coordinator/nodeSelector.js`).
+   - A per-model readers-writer lock lets concurrent downloads of the same model proceed in parallel, while delete and replication (which mutate model/replica state) acquire exclusive access (`backend/src/coordinator/coordinator.js`).
+
+---
+
+## Distributed Systems Concepts Map (Unit 1 & Unit 2 Syllabus Mapping)
+
+This section names the textbook concept explicitly and points at the exact mechanism/file that demonstrates it, for viva/evaluation reference.
+
+### Unit 1 — Introduction to Distributed Systems
+
+| Concept | How it's demonstrated here |
+| :--- | :--- |
+| **Definition & Goals of a DS** | Multiple independent nodes (Coordinator + 3 Storage Nodes) present a single, unified model repository to the client — resource sharing and collaborative storage across autonomous processes. |
+| **Types of DS** | Hybrid: **client-server** (Frontend ↔ Coordinator over REST) layered on top of **coordinator-worker** (Coordinator ↔ Storage Nodes over gRPC) layered on top of **peer-to-peer** (Storage Node ↔ Storage Node direct replication). |
+| **Architecture style** | Not a single style — a layered composition: presentation tier (React dashboard) → logical/coordination tier (Coordinator: placement, routing, metadata) → data tier (Storage Nodes + PostgreSQL). Replication path breaks out of the strict layering into direct P2P (`storageNode.js` `handleReplicateToNode`). |
+| **Design Issue — Access Transparency** | Clients call `GET/POST /api/models/...`; they never issue gRPC calls or know a protocol switch happens underneath (`coordinator.js`). |
+| **Design Issue — Location Transparency** | Clients never specify *which* physical node holds a model; the Coordinator resolves this via `RequestRouter.routeDownload()`. |
+| **Design Issue — Replication Transparency** | Uploads/downloads don't expose the replication factor or replica set to the caller; replicas are created and read from transparently. |
+| **Design Issue — Failure Transparency (partial)** | Round-robin download routing skips `OFFLINE` nodes and unsynced replicas (`requestRouter.js`), masking a single dead replica from the client. *Known limitation:* there is no automatic re-replication when a node goes permanently offline — this is flagged as a gap, not solved. |
+| **Design Issue — Scalability** | Chunked (64KB) streaming means memory use per transfer is constant regardless of model size (`fileManager.js` uses `fs.createReadStream`/`createWriteStream`, never buffers a full file); adding a node is a config change, not a code change. |
+| **Design Issue — Concurrency Control** | `backend/src/utils/concurrency.js` — a keyed `Mutex` serializes the node-selection race (see below), and a keyed `RWLock` gives concurrent downloads shared access while delete/replication get exclusive access per model. |
+| **Design Issue — Heterogeneity** | All three storage nodes run the *exact same* generic code (`backend/src/storage/`), parameterized only by env vars (`NODE_ID`, `NODE_PORT`, `STORAGE_PATH`) — demonstrating that the node role is decoupled from any specific machine identity. gRPC/Protobuf as the wire contract means nodes could in principle be reimplemented in another language without changing the protocol. |
+| **Middleware** | The gRPC/Protobuf layer (RPC middleware) and the NATS client (message-oriented middleware, with automatic fallback to a local `EventEmitter` if the broker is unreachable) both sit between application logic and the network, hiding transport details from callers. `database/connection.js` is a small data-access middleware layer that transparently switches between PostgreSQL and an in-memory store. |
+| **Overview of DS / Model of Distributed Computation** *(self-study)* | Upload/replicate/download map onto the classic request-response and stream models of distributed computation: unary RPC (`HealthCheck`, `GetStatus`), client-streaming (`StoreChunkStream`), and server-streaming (`RetrieveChunkStream`). |
+| **Distributed Multimedia Systems** | **Not implemented.** This system streams LLM weight binaries (`.bin` files), not audio/video; flagged as an explicit syllabus gap rather than stretched to fit. |
+| **Virtualization** *(self-study)* | `docker-compose.yml` runs the Coordinator, 3 Storage Nodes, PostgreSQL, and NATS as isolated containers — each storage node is a virtualized instance of the same image, differing only by injected environment variables/ports. |
+
+### Unit 2 — Communication
+
+| Concept | How it's demonstrated here |
+| :--- | :--- |
+| **Fundamentals of Communication** | Every cross-process call is logged with source, target, protocol, operation, and status (`communication/logger.js`), and rendered as a trace on the Requests page — making the protocol layering (HTTP → gRPC → TCP) and message flow directly observable. |
+| **Remote Procedure Call (RPC)** | `proto/storage.proto` defines `StorageService` (`StoreChunkStream`, `RetrieveChunkStream`, `ReplicateToNode`, `GetStatus`, `DeleteModelFile`, `HealthCheck`) implemented with gRPC — both unary and streaming RPC styles are used. |
+| **Message-Oriented Communication** | NATS pub/sub (`communication/nats/natsClient.js`) decouples publishers from subscribers via named subjects (`node.events`, `system.events`, `replication.events`) — the Coordinator reacts to node/replication events without a direct call into the component that raised them. |
+| **Stream-Oriented Communication** | Model files are transferred as a sequence of ordered 64KB chunks over gRPC client/server streams (`chunkManager.js`, `storageNode.js`), not as one atomic message — the defining trait of stream-oriented vs. request-reply communication. |
+| **Peer-to-Peer (P2P) Messaging** | Once the Coordinator selects a primary and replica set, replication traffic flows **directly** node-to-node (`Node 1 ➔ Node 2`) via gRPC — the Coordinator is not in the data path, only in the control path (`handleReplicateToNode` in `storageNode.js`). *Known limitation:* peer addresses are statically configured, not dynamically discovered (no gossip/DHT), so this is P2P data transfer without P2P discovery. |
+| **WebRTC** | **Not implemented.** No `RTCPeerConnection`/data channel anywhere in the codebase; flagged as an explicit syllabus gap rather than claimed. |
+| **Names, Identifiers & Addresses** *(self-study)* | Models are identified by a UUID (`modelId`, location-independent identifier) separate from their human-readable `name`/`version`; nodes are identified by a logical `nodeId` (e.g. `node-1`) distinct from their physical `host:port` address, which can change without changing identity. |
+| **Fault Tolerance** *(self-study)* | Heartbeat-based failure detection: the Coordinator polls every node's `HealthCheck`/`GetStatus` RPC every 5s and marks it `OFFLINE` on failure (`coordinator.js` `startHealthCheckPoller`); each node also announces liveness proactively over NATS (`storage/index.js`). Combined with replication, a single node failure doesn't lose data or block reads of already-synced replicas. |
 
 ---
 
