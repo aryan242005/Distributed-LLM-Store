@@ -22,3 +22,6 @@ Thumbs.db
 storage/node-1/*
 storage/node-2/*
 storage/node-3/*
+
+# AWS deploy key pair
+deploy/aws/*.pem

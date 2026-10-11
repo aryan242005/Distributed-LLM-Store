@@ -33,6 +33,23 @@
         "created_at": "2026-08-30T15:58:45.046Z",
         "updated_at": "2026-08-30T16:06:37.366Z"
       }
+    ],
+    [
+      "61b8e756-b355-4fd9-9ff2-afa30e981e47",
+      {
+        "id": "61b8e756-b355-4fd9-9ff2-afa30e981e47",
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "version": "1.0.0",
+        "filename": "pytorch_model.bin",
+        "size_bytes": 90888945,
+        "checksum": "c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256",
+        "replication_factor": 3,
+        "primary_node_id": "node-1",
+        "description": "",
+        "status": "READY",
+        "created_at": "2026-09-01T17:59:14.916Z",
+        "updated_at": "2026-09-01T17:59:14.916Z"
+      }
     ]
   ],
   "storage_nodes": [
@@ -44,10 +61,10 @@
         "port": 5001,
         "status": "ONLINE",
         "total_storage_bytes": 107374182400,
-        "used_storage_bytes": 7340032,
-        "available_storage_bytes": 107366842368,
-        "stored_models_count": 2,
-        "last_heartbeat": "2026-08-30T16:06:37.346Z",
+        "used_storage_bytes": 90888945,
+        "available_storage_bytes": 107283293455,
+        "stored_models_count": 1,
+        "last_heartbeat": "2026-09-01T18:07:40.465Z",
         "created_at": "2026-08-30T16:06:37.347Z"
       }
     ],
@@ -59,10 +76,10 @@
         "port": 5002,
         "status": "ONLINE",
         "total_storage_bytes": 107374182400,
-        "used_storage_bytes": 7340032,
-        "available_storage_bytes": 107366842368,
-        "stored_models_count": 2,
-        "last_heartbeat": "2026-08-30T16:06:37.347Z",
+        "used_storage_bytes": 90888945,
+        "available_storage_bytes": 107283293455,
+        "stored_models_count": 1,
+        "last_heartbeat": "2026-09-01T18:07:40.469Z",
         "created_at": "2026-08-30T16:06:37.347Z"
       }
     ],
@@ -74,10 +91,10 @@
         "port": 5003,
         "status": "ONLINE",
         "total_storage_bytes": 107374182400,
-        "used_storage_bytes": 7340032,
-        "available_storage_bytes": 107366842368,
-        "stored_models_count": 2,
-        "last_heartbeat": "2026-08-30T16:06:37.347Z",
+        "used_storage_bytes": 90888945,
+        "available_storage_bytes": 107283293455,
+        "stored_models_count": 1,
+        "last_heartbeat": "2026-09-01T18:07:40.472Z",
         "created_at": "2026-08-30T16:06:37.347Z"
       }
     ]
@@ -166,8 +183,598 @@
         "synced_at": "2026-08-30T16:06:37.367Z",
         "created_at": "2026-08-30T16:06:37.367Z"
       }
+    ],
+    [
+      "61b8e756-b355-4fd9-9ff2-afa30e981e47_node-1",
+      {
+        "id": "cc616b23-45dc-42e2-988a-dc235bb9e8df",
+        "model_id": "61b8e756-b355-4fd9-9ff2-afa30e981e47",
+        "node_id": "node-1",
+        "role": "PRIMARY",
+        "status": "SYNCED",
+        "checksum": "c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256",
+        "size_bytes": 90888945,
+        "synced_at": "2026-09-01T17:59:14.916Z",
+        "created_at": "2026-09-01T17:59:14.916Z"
+      }
+    ],
+    [
+      "61b8e756-b355-4fd9-9ff2-afa30e981e47_node-2",
+      {
+        "id": "c8cc6dba-dc53-42a5-a01a-45d7f77b19a3",
+        "model_id": "61b8e756-b355-4fd9-9ff2-afa30e981e47",
+        "node_id": "node-2",
+        "role": "REPLICA",
+        "status": "SYNCED",
+        "checksum": "c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256",
+        "size_bytes": "90888945",
+        "synced_at": "2026-09-01T17:59:15.542Z",
+        "created_at": "2026-09-01T17:59:14.922Z"
+      }
+    ],
+    [
+      "61b8e756-b355-4fd9-9ff2-afa30e981e47_node-3",
+      {
+        "id": "8032082f-2895-4026-bd34-ca954a514a6a",
+        "model_id": "61b8e756-b355-4fd9-9ff2-afa30e981e47",
+        "node_id": "node-3",
+        "role": "REPLICA",
+        "status": "SYNCED",
+        "checksum": "c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256",
+        "size_bytes": "90888945",
+        "synced_at": "2026-09-01T17:59:16.154Z",
+        "created_at": "2026-09-01T17:59:15.545Z"
+      }
     ]
   ],
-  "system_events": [],
-  "communication_logs": []
+  "system_events": [
+    {
+      "id": "6fb7ed25-cf50-4475-984d-34a00287b81b",
+      "event_type": "MODEL_UPLOADED",
+      "source": "Coordinator",
+      "payload": {
+        "modelId": "705a95a9-c82f-49ff-af2a-6c43e3f7fb65",
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "version": "1.0.0",
+        "filename": "pytorch_model.bin",
+        "sizeBytes": 90888945,
+        "checksum": "c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256",
+        "primaryNodeId": "node-1",
+        "replicationFactor": 3
+      },
+      "created_at": "2026-09-01T16:53:40.276Z"
+    },
+    {
+      "id": "c7f31a0c-d38e-4d62-80e7-3b4fc1220b3b",
+      "event_type": "REPLICATION_STARTED",
+      "source": "ReplicationManager",
+      "payload": {
+        "modelId": "705a95a9-c82f-49ff-af2a-6c43e3f7fb65",
+        "modelName": "sentence-transformers/all-MiniLM-L6-v2",
+        "primaryNodeId": "node-1",
+        "targetNodes": [
+          "node-2",
+          "node-3"
+        ],
+        "replicationFactor": 3
+      },
+      "created_at": "2026-09-01T16:53:40.277Z"
+    },
+    {
+      "id": "3d4b9dda-e399-4adc-8fb1-cbd7cf09d102",
+      "event_type": "REPLICATION_COMPLETED",
+      "source": "ReplicationManager",
+      "payload": {
+        "modelId": "705a95a9-c82f-49ff-af2a-6c43e3f7fb65",
+        "modelName": "sentence-transformers/all-MiniLM-L6-v2",
+        "totalReplicasCreated": 3,
+        "targetNodesCount": 2,
+        "successCount": 2,
+        "details": [
+          {
+            "nodeId": "node-2",
+            "status": "SYNCED",
+            "bytesReplicated": "90888945"
+          },
+          {
+            "nodeId": "node-3",
+            "status": "SYNCED",
+            "bytesReplicated": "90888945"
+          }
+        ]
+      },
+      "created_at": "2026-09-01T16:53:41.845Z"
+    },
+    {
+      "id": "8806aec0-90a3-494b-8781-14d97f990b2f",
+      "event_type": "MODEL_UPLOADED",
+      "source": "Coordinator",
+      "payload": {
+        "modelId": "a6c3f332-fd3e-4d24-b44b-a8826a6bc53a",
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "version": "1.0.0",
+        "filename": "pytorch_model.bin",
+        "sizeBytes": 90888945,
+        "checksum": "c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256",
+        "primaryNodeId": "node-1",
+        "replicationFactor": 3
+      },
+      "created_at": "2026-09-01T16:59:00.750Z"
+    },
+    {
+      "id": "b3f310c2-a9a8-4bd5-b54e-ba2c27b1ce2b",
+      "event_type": "REPLICATION_STARTED",
+      "source": "ReplicationManager",
+      "payload": {
+        "modelId": "a6c3f332-fd3e-4d24-b44b-a8826a6bc53a",
+        "modelName": "sentence-transformers/all-MiniLM-L6-v2",
+        "primaryNodeId": "node-1",
+        "targetNodes": [
+          "node-2",
+          "node-3"
+        ],
+        "replicationFactor": 3
+      },
+      "created_at": "2026-09-01T16:59:00.750Z"
+    },
+    {
+      "id": "b97cac63-923b-484b-baee-1e6514d6a0ce",
+      "event_type": "REPLICATION_COMPLETED",
+      "source": "ReplicationManager",
+      "payload": {
+        "modelId": "a6c3f332-fd3e-4d24-b44b-a8826a6bc53a",
+        "modelName": "sentence-transformers/all-MiniLM-L6-v2",
+        "totalReplicasCreated": 3,
+        "targetNodesCount": 2,
+        "successCount": 2,
+        "details": [
+          {
+            "nodeId": "node-2",
+            "status": "SYNCED",
+            "bytesReplicated": "90888945"
+          },
+          {
+            "nodeId": "node-3",
+            "status": "SYNCED",
+            "bytesReplicated": "90888945"
+          }
+        ]
+      },
+      "created_at": "2026-09-01T16:59:02.098Z"
+    },
+    {
+      "id": "44482fb7-2501-4abe-8dec-aa81943e9682",
+      "event_type": "MODEL_DELETED",
+      "source": "Coordinator",
+      "payload": {
+        "modelId": "a6c3f332-fd3e-4d24-b44b-a8826a6bc53a",
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "filename": "pytorch_model.bin"
+      },
+      "created_at": "2026-09-01T16:59:28.677Z"
+    },
+    {
+      "id": "fd90a8cb-e0c3-4cef-aaff-c7c7c3223681",
+      "event_type": "MODEL_UPLOADED",
+      "source": "Coordinator",
+      "payload": {
+        "modelId": "c703b166-0b49-4fc7-a743-77cc54fa7969",
+        "name": "sentence-transformers/all-MiniLM-L6-v2 Copy",
+        "version": "1.0.0",
+        "filename": "pytorch_model.bin",
+        "sizeBytes": 90888945,
+        "checksum": "c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256",
+        "primaryNodeId": "node-1",
+        "replicationFactor": 2
+      },
+      "created_at": "2026-09-01T17:06:12.866Z"
+    },
+    {
+      "id": "78cd467b-bac7-4e91-8a92-205e6f594f3d",
+      "event_type": "REPLICATION_STARTED",
+      "source": "ReplicationManager",
+      "payload": {
+        "modelId": "c703b166-0b49-4fc7-a743-77cc54fa7969",
+        "modelName": "sentence-transformers/all-MiniLM-L6-v2 Copy",
+        "primaryNodeId": "node-1",
+        "targetNodes": [
+          "node-2"
+        ],
+        "replicationFactor": 2
+      },
+      "created_at": "2026-09-01T17:06:12.866Z"
+    },
+    {
+      "id": "9a94ae65-66d2-4514-a680-8e48969473e7",
+      "event_type": "REPLICATION_COMPLETED",
+      "source": "ReplicationManager",
+      "payload": {
+        "modelId": "c703b166-0b49-4fc7-a743-77cc54fa7969",
+        "modelName": "sentence-transformers/all-MiniLM-L6-v2 Copy",
+        "totalReplicasCreated": 2,
+        "targetNodesCount": 1,
+        "successCount": 1,
+        "details": [
+          {
+            "nodeId": "node-2",
+            "status": "SYNCED",
+            "bytesReplicated": "90888945"
+          }
+        ]
+      },
+      "created_at": "2026-09-01T17:06:13.492Z"
+    },
+    {
+      "id": "f1e157df-8c65-45e5-922e-4889e516204f",
+      "event_type": "MODEL_DELETED",
+      "source": "Coordinator",
+      "payload": {
+        "modelId": "c703b166-0b49-4fc7-a743-77cc54fa7969",
+        "name": "sentence-transformers/all-MiniLM-L6-v2 Copy",
+        "filename": "pytorch_model.bin"
+      },
+      "created_at": "2026-09-01T17:57:29.052Z"
+    },
+    {
+      "id": "5214fb71-d5cc-4beb-b25c-af367f3f7627",
+      "event_type": "MODEL_DELETED",
+      "source": "Coordinator",
+      "payload": {
+        "modelId": "6af8cb94-3d7f-4ea1-aa29-0a796063a2a8",
+        "name": "TinyLlama-v1",
+        "filename": "TinyLlama-v1.bin"
+      },
+      "created_at": "2026-09-01T17:57:32.085Z"
+    },
+    {
+      "id": "256e190a-99d3-49a4-8a65-206b5f8d0f3e",
+      "event_type": "MODEL_DELETED",
+      "source": "Coordinator",
+      "payload": {
+        "modelId": "705a95a9-c82f-49ff-af2a-6c43e3f7fb65",
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "filename": "pytorch_model.bin"
+      },
+      "created_at": "2026-09-01T17:57:36.754Z"
+    },
+    {
+      "id": "8303112c-eee8-4347-afcf-4ba24cef6c60",
+      "event_type": "MODEL_UPLOADED",
+      "source": "Coordinator",
+      "payload": {
+        "modelId": "61b8e756-b355-4fd9-9ff2-afa30e981e47",
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "version": "1.0.0",
+        "filename": "pytorch_model.bin",
+        "sizeBytes": 90888945,
+        "checksum": "c3a85f238711653950f6a79ece63eb0ea93d76f6a6284be04019c53733baf256",
+        "primaryNodeId": "node-1",
+        "replicationFactor": 3
+      },
+      "created_at": "2026-09-01T17:59:14.921Z"
+    },
+    {
+      "id": "f06ed585-4dc1-4082-a923-624b8d135a9f",
+      "event_type": "REPLICATION_STARTED",
+      "source": "ReplicationManager",
+      "payload": {
+        "modelId": "61b8e756-b355-4fd9-9ff2-afa30e981e47",
+        "modelName": "sentence-transformers/all-MiniLM-L6-v2",
+        "primaryNodeId": "node-1",
+        "targetNodes": [
+          "node-2",
+          "node-3"
+        ],
+        "replicationFactor": 3
+      },
+      "created_at": "2026-09-01T17:59:14.921Z"
+    },
+    {
+      "id": "690df812-fe7c-4943-baf4-60da3743a53a",
+      "event_type": "REPLICATION_COMPLETED",
+      "source": "ReplicationManager",
+      "payload": {
+        "modelId": "61b8e756-b355-4fd9-9ff2-afa30e981e47",
+        "modelName": "sentence-transformers/all-MiniLM-L6-v2",
+        "totalReplicasCreated": 3,
+        "targetNodesCount": 2,
+        "successCount": 2,
+        "details": [
+          {
+            "nodeId": "node-2",
+            "status": "SYNCED",
+            "bytesReplicated": "90888945"
+          },
+          {
+            "nodeId": "node-3",
+            "status": "SYNCED",
+            "bytesReplicated": "90888945"
+          }
+        ]
+      },
+      "created_at": "2026-09-01T17:59:16.157Z"
+    }
+  ],
+  "communication_logs": [
+    {
+      "id": "ab9e0e02-59ae-4534-a8c1-c5a9966905c5",
+      "source": "Coordinator",
+      "target": "node-2",
+      "protocol": "gRPC",
+      "operation": "GET_MODEL",
+      "status": "SUCCESS",
+      "details": "Streaming download of TinyLlama-1.1B-Q4-test.bin (5242880 bytes)",
+      "timestamp": "2026-09-01T16:25:35.048Z"
+    },
+    {
+      "id": "dd4bb0b2-7b68-4026-b0bf-781f52143da7",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "STORE_MODEL",
+      "status": "IN_PROGRESS",
+      "details": "Streaming upload of pytorch_model.bin (90888945 bytes)",
+      "timestamp": "2026-09-01T16:53:39.346Z"
+    },
+    {
+      "id": "315208c5-ab98-43f8-8a2f-cbdf39687044",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "STORE_MODEL",
+      "status": "SUCCESS",
+      "details": "Stored 90888945 bytes. SHA256 verified.",
+      "timestamp": "2026-09-01T16:53:40.270Z"
+    },
+    {
+      "id": "2d861ee0-c5b9-4295-8438-5302483c2c3b",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "INSTRUCT_REPLICATION",
+      "status": "SUCCESS",
+      "details": "Instruct node-1 to stream to node-2 (localhost:5002)",
+      "timestamp": "2026-09-01T16:53:40.278Z"
+    },
+    {
+      "id": "8010487c-548b-49cb-b45e-a75d3cd20c68",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "INSTRUCT_REPLICATION",
+      "status": "SUCCESS",
+      "details": "Instruct node-1 to stream to node-3 (localhost:5003)",
+      "timestamp": "2026-09-01T16:53:41.058Z"
+    },
+    {
+      "id": "3bd9ee6f-830f-4594-9d71-156d6651d107",
+      "source": "Coordinator",
+      "target": "node-3",
+      "protocol": "gRPC",
+      "operation": "GET_MODEL",
+      "status": "SUCCESS",
+      "details": "Streaming download of pytorch_model.bin (90888945 bytes)",
+      "timestamp": "2026-09-01T16:54:26.776Z"
+    },
+    {
+      "id": "a7e9fa19-c359-48e6-8998-b86befd75d6d",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "STORE_MODEL",
+      "status": "IN_PROGRESS",
+      "details": "Streaming upload of pytorch_model.bin (90888945 bytes)",
+      "timestamp": "2026-09-01T16:58:59.985Z"
+    },
+    {
+      "id": "02f7c328-03f7-4b7d-8510-a6e52b9070d7",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "STORE_MODEL",
+      "status": "SUCCESS",
+      "details": "Stored 90888945 bytes. SHA256 verified.",
+      "timestamp": "2026-09-01T16:59:00.744Z"
+    },
+    {
+      "id": "19d6e46f-172b-4a3d-bc2c-44e7eff4cb47",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "INSTRUCT_REPLICATION",
+      "status": "SUCCESS",
+      "details": "Instruct node-1 to stream to node-2 (localhost:5002)",
+      "timestamp": "2026-09-01T16:59:00.751Z"
+    },
+    {
+      "id": "cdf09f67-3610-4e31-a29f-c21e4e36f089",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "INSTRUCT_REPLICATION",
+      "status": "SUCCESS",
+      "details": "Instruct node-1 to stream to node-3 (localhost:5003)",
+      "timestamp": "2026-09-01T16:59:01.427Z"
+    },
+    {
+      "id": "44bddb7c-fbb3-4568-8f53-f91e2d7639db",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted pytorch_model.bin from node-1",
+      "timestamp": "2026-09-01T16:59:28.641Z"
+    },
+    {
+      "id": "63682e4f-dff4-413a-b6c5-fb79ceffa1ba",
+      "source": "Coordinator",
+      "target": "node-2",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted pytorch_model.bin from node-2",
+      "timestamp": "2026-09-01T16:59:28.660Z"
+    },
+    {
+      "id": "a04cfd03-22fe-4b7d-9737-8c394a1eba09",
+      "source": "Coordinator",
+      "target": "node-3",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted pytorch_model.bin from node-3",
+      "timestamp": "2026-09-01T16:59:28.676Z"
+    },
+    {
+      "id": "6a58c910-a444-44d3-865d-e68fb6ece34f",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "STORE_MODEL",
+      "status": "IN_PROGRESS",
+      "details": "Streaming upload of pytorch_model.bin (90888945 bytes)",
+      "timestamp": "2026-09-01T17:06:12.158Z"
+    },
+    {
+      "id": "b2c53cbc-87ba-4e06-b21a-a8676707a319",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "STORE_MODEL",
+      "status": "SUCCESS",
+      "details": "Stored 90888945 bytes. SHA256 verified.",
+      "timestamp": "2026-09-01T17:06:12.861Z"
+    },
+    {
+      "id": "bd72c590-8399-41c9-868f-1ba714ae2e1b",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "INSTRUCT_REPLICATION",
+      "status": "SUCCESS",
+      "details": "Instruct node-1 to stream to node-2 (localhost:5002)",
+      "timestamp": "2026-09-01T17:06:12.868Z"
+    },
+    {
+      "id": "b615c9a9-39f3-42da-abf0-3ceae8664d3b",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted pytorch_model.bin from node-1",
+      "timestamp": "2026-09-01T17:57:29.015Z"
+    },
+    {
+      "id": "e7a2405f-4e03-4859-83ad-fdc355f83b6f",
+      "source": "Coordinator",
+      "target": "node-2",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted pytorch_model.bin from node-2",
+      "timestamp": "2026-09-01T17:57:29.050Z"
+    },
+    {
+      "id": "30936b63-faea-4218-9a7a-038dfd5556b3",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted TinyLlama-v1.bin from node-1",
+      "timestamp": "2026-09-01T17:57:32.077Z"
+    },
+    {
+      "id": "ffe5e115-a073-40be-870e-eefe59b4556d",
+      "source": "Coordinator",
+      "target": "node-2",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted TinyLlama-v1.bin from node-2",
+      "timestamp": "2026-09-01T17:57:32.081Z"
+    },
+    {
+      "id": "a9c4d82e-73bd-4920-9906-353af835dcc7",
+      "source": "Coordinator",
+      "target": "node-3",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted TinyLlama-v1.bin from node-3",
+      "timestamp": "2026-09-01T17:57:32.084Z"
+    },
+    {
+      "id": "d6f46b1f-bd9c-4745-a674-edb2b7832a7c",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted pytorch_model.bin from node-1",
+      "timestamp": "2026-09-01T17:57:36.713Z"
+    },
+    {
+      "id": "59a50408-7496-4705-a3f1-e45d86ef1dd1",
+      "source": "Coordinator",
+      "target": "node-2",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted pytorch_model.bin from node-2",
+      "timestamp": "2026-09-01T17:57:36.734Z"
+    },
+    {
+      "id": "a964cdec-fa00-4d82-98c8-b7b5a97d0db1",
+      "source": "Coordinator",
+      "target": "node-3",
+      "protocol": "gRPC",
+      "operation": "DELETE_MODEL",
+      "status": "SUCCESS",
+      "details": "Deleted pytorch_model.bin from node-3",
+      "timestamp": "2026-09-01T17:57:36.752Z"
+    },
+    {
+      "id": "1eb1041d-5f64-4301-be7b-22cf966f9494",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "STORE_MODEL",
+      "status": "IN_PROGRESS",
+      "details": "Streaming upload of pytorch_model.bin (90888945 bytes)",
+      "timestamp": "2026-09-01T17:59:14.311Z"
+    },
+    {
+      "id": "d595dde2-ae74-4fbe-94b7-5de3fb0de6c7",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "STORE_MODEL",
+      "status": "SUCCESS",
+      "details": "Stored 90888945 bytes. SHA256 verified.",
+      "timestamp": "2026-09-01T17:59:14.915Z"
+    },
+    {
+      "id": "a17927fb-f7bf-47cb-af53-8bcb2c8b3f4a",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "INSTRUCT_REPLICATION",
+      "status": "SUCCESS",
+      "details": "Instruct node-1 to stream to node-2 (localhost:5002)",
+      "timestamp": "2026-09-01T17:59:14.922Z"
+    },
+    {
+      "id": "6d5af328-e971-470c-90c1-47268f00c64c",
+      "source": "Coordinator",
+      "target": "node-1",
+      "protocol": "gRPC",
+      "operation": "INSTRUCT_REPLICATION",
+      "status": "SUCCESS",
+      "details": "Instruct node-1 to stream to node-3 (localhost:5003)",
+      "timestamp": "2026-09-01T17:59:15.545Z"
+    }
+  ]
 }

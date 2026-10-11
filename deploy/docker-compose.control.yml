@@ -1,0 +1,71 @@
+# Control plane for the multi-machine AWS deployment (see deploy/aws/up.sh).
+# Storage nodes run on separate EC2 instances (and also self-register over NATS),
+# so they are intentionally absent here.
+#
+# Usage: PUBLIC_HOST=<public ip> NODE_1_HOST=<ip> NODE_2_HOST=<ip> NODE_3_HOST=<ip> \
+#          docker compose -f deploy/docker-compose.control.yml up -d --build
+# (up.sh writes these into deploy/.env, which compose reads automatically)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: model_repo
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  nats:
+    image: nats:2.10-alpine
+    restart: always
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  coordinator:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    restart: always
+    command: ["node", "src/api/server.js"]
+    ports:
+      - "4000:4000"
+    environment:
+      - COORDINATOR_PORT=4000
+      - COORDINATOR_HOST=0.0.0.0
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/model_repo
+      - NATS_URL=nats://nats:4222
+      - NODE_1_HOST=${NODE_1_HOST:-localhost}
+      - NODE_1_PORT=5001
+      - NODE_2_HOST=${NODE_2_HOST:-localhost}
+      - NODE_2_PORT=5002
+      - NODE_3_HOST=${NODE_3_HOST:-localhost}
+      - NODE_3_PORT=5003
+      - DEFAULT_REPLICATION_FACTOR=3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: http://${PUBLIC_HOST:?set PUBLIC_HOST to the control node public IP}:4000/api
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - coordinator
+
+volumes:
+  pgdata:

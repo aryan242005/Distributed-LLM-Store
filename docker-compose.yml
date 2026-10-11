@@ -129,12 +129,12 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000/api
     container_name: dmr-frontend
     restart: always
     ports:
       - "3000:3000"
-    environment:
-      - VITE_API_URL=http://localhost:4000/api
     depends_on:
       - coordinator
 
