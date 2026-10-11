@@ -179,8 +179,9 @@ launch() {  # $1=name  $2=type  $3=disk GB  $4=user-data  $5...=network args
   command -v cygpath >/dev/null && ud_uri="file://$(cygpath -m "$ud_file")"
   awsq ec2 run-instances \
     --image-id "$AMI_ID" --instance-type "$type" --key-name "$KEY_NAME" "$@" \
-    --block-device-mappings "DeviceName=/dev/sda1,Ebs={VolumeSize=$disk,VolumeType=gp3}" \
+    --block-device-mappings "DeviceName=/dev/sda1,Ebs={VolumeSize=$disk,VolumeType=gp3,DeleteOnTermination=true}" \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name},{Key=Project,Value=$PROJECT_TAG}]" \
+                         "ResourceType=volume,Tags=[{Key=Name,Value=$name},{Key=Project,Value=$PROJECT_TAG}]" \
     --user-data "$ud_uri" \
     --query 'Instances[0].[InstanceId,PrivateIpAddress]' --output text
   rm -f "$ud_file"
