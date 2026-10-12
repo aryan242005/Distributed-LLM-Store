@@ -3,6 +3,7 @@ const http = require('http');
 const StorageNodeServer = require('./storageNode');
 const config = require('../config/config');
 const natsClient = require('../communication/nats/natsClient');
+const SyncAgent = require('../sync/syncAgent');
 
 async function main() {
   const nodeId = process.env.NODE_ID || config.node.id;
@@ -52,10 +53,22 @@ async function main() {
     } catch (e) {}
   }, config.node.heartbeatIntervalMs || 5000);
 
+  // Unit 3 synchronization layer: beacons, Bully election, Berkeley clock sync,
+  // Lamport/vector clocks, Ricart-Agrawala mutual exclusion, Chandy-Lamport snapshots
+  const syncAgent = new SyncAgent({
+    nodeId,
+    transport: natsClient,
+    fileManager: nodeServer.fileManager,
+    clockSkewMs: parseInt(process.env.CLOCK_SKEW_MS || '0', 10),
+    clockDriftPpm: parseInt(process.env.CLOCK_DRIFT_PPM || '0', 10),
+  });
+  await syncAgent.start();
+
   // Graceful shutdown
   const shutdown = async () => {
     console.log(`\nShutting down Storage Node ${nodeId}...`);
     clearInterval(heartbeatInterval);
+    syncAgent.stop();
     await nodeServer.stop();
     await natsClient.close();
     process.exit(0);

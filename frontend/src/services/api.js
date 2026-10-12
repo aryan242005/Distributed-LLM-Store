@@ -81,6 +81,33 @@ export const api = {
     const res = await client.get(`/events?limit=${limit}`);
     return res.data.data;
   },
+
+  // Synchronization (Unit 3)
+  getSyncStatus: async () => {
+    const res = await client.get('/sync/status');
+    return res.data.data;
+  },
+
+  getSyncTrace: async (limit = 200) => {
+    const res = await client.get(`/sync/trace?limit=${limit}`);
+    return res.data.data;
+  },
+
+  getClockRounds: async () => {
+    const res = await client.get('/sync/clock-rounds');
+    return res.data.data;
+  },
+
+  getSnapshots: async () => {
+    const res = await client.get('/sync/snapshots');
+    return res.data.data;
+  },
+
+  startElection: async (nodeId) => (await client.post('/sync/election', { nodeId })).data,
+  runClockSync: async () => (await client.post('/sync/clock-sync')).data,
+  injectSkew: async (nodeId, deltaMs) => (await client.post('/sync/skew', { nodeId, deltaMs })).data,
+  requestMutex: async (nodeId) => (await client.post('/sync/mutex', { nodeId })).data,
+  takeSnapshot: async (nodeId) => (await client.post('/sync/snapshot', { nodeId })).data,
 };
 
 // Utilities for formatting

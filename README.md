@@ -2,6 +2,8 @@
 
 A production-grade distributed file storage and replication system for large Machine Learning / Large Language Model (LLM) weights. Built with **Node.js** (Coordinator & Storage Nodes), **React + Vite** (Dashboard Frontend), **PostgreSQL** (Metadata Store), **gRPC** (RPC & Chunk Streaming), and **NATS** (Message-oriented Event Bus).
 
+The storage nodes also run a **synchronization layer** (beacons, Bully election, Berkeley clock sync, Lamport & vector clocks, Ricart-Agrawala mutual exclusion, Chandy-Lamport snapshots), and the whole cluster can be **deployed across 4 EC2 machines in 3 AWS Availability Zones** with one script.
+
 ---
 
 ## Architecture Overview
@@ -26,9 +28,9 @@ A production-grade distributed file storage and replication system for large Mac
          │ • models               │  │ • NODE_REGISTERED│  │                                   │
          │ • storage_nodes        │  │ • MODEL_UPLOADED │  │  ┌──────────────┐                 │
          │ • replicas             │  │ • REPLICATION_*  │  │  │ Storage      │                 │
-         │ • system_events        │  └──────────────────┘  │  │ Node 1       │ (Port 5001)     │
-         │ • communication_logs   │                        │  │ storage/node-1│                │
-         └────────────────────────┘                        │  └──────┬───────┘                 │
+         │ • system_events        │  │ • cluster.p2p    │  │  │ Node 1       │ (Port 5001)     │
+         │ • communication_logs   │  │ • sync.*         │  │  │ storage/node-1│                │
+         └────────────────────────┘  └──────────────────┘  │  └──────┬───────┘                 │
                                                            │         │ gRPC P2P Replication    │
                                                            │         ▼                         │
                                                            │  ┌──────────────┐  ┌────────────┐ │
@@ -38,6 +40,10 @@ A production-grade distributed file storage and replication system for large Mac
                                                            │  └──────────────┘  └────────────┘ │
                                                            └───────────────────────────────────┘
 ```
+
+Two kinds of traffic flow between the storage nodes:
+- **Data plane (gRPC):** model chunks are streamed node-to-node during replication.
+- **Synchronization plane (NATS `cluster.p2p`):** beacons, election, clock-sync, mutex and snapshot messages, each stamped with Lamport and vector timestamps. Nodes report their state to the Coordinator on `sync.*` subjects, and the Coordinator only observes.
 
 ---
 
@@ -60,10 +66,15 @@ A production-grade distributed file storage and replication system for large Mac
 8. **Concurrency Control**:
    - A keyed mutex (`backend/src/utils/concurrency.js`) serializes node-placement decisions so concurrent uploads can't race onto the same "least loaded" node before real storage stats update (`backend/src/coordinator/nodeSelector.js`).
    - A per-model readers-writer lock lets concurrent downloads of the same model proceed in parallel, while delete and replication (which mutate model/replica state) acquire exclusive access (`backend/src/coordinator/coordinator.js`).
+9. **Synchronization Between Nodes** (`backend/src/sync/`):
+   - Nodes track each other with a **beacon protocol**, elect a leader with the **Bully algorithm**, and the leader keeps clocks in agreement with the **Berkeley algorithm**.
+   - Every node-to-node message carries **Lamport and vector timestamps**. A cluster-wide maintenance task is guarded by **Ricart-Agrawala** distributed mutual exclusion, and **Chandy-Lamport** snapshots capture a consistent global state. All of it is live on the dashboard's **Synchronization** page.
+10. **Multi-Machine Cloud Deployment & Fault Tolerance** (`deploy/aws/`):
+    - One script deploys the coordinator and 3 storage nodes on separate EC2 instances in 3 Availability Zones. A demo script powers machines off to show failure detection, re-routed downloads, re-election and recovery.
 
 ---
 
-## Distributed Systems Concepts Map (Unit 1 & Unit 2 Syllabus Mapping)
+## Distributed Systems Concepts Map (Units 1–4 Syllabus Mapping)
 
 This section names the textbook concept explicitly and points at the exact mechanism/file that demonstrates it, for viva/evaluation reference.
 
@@ -99,6 +110,35 @@ This section names the textbook concept explicitly and points at the exact mecha
 | **Names, Identifiers & Addresses** *(self-study)* | Models are identified by a UUID (`modelId`, location-independent identifier) separate from their human-readable `name`/`version`; nodes are identified by a logical `nodeId` (e.g. `node-1`) distinct from their physical `host:port` address, which can change without changing identity. |
 | **Fault Tolerance** *(self-study)* | Heartbeat-based failure detection: the Coordinator polls every node's `HealthCheck`/`GetStatus` RPC every 5s and marks it `OFFLINE` on failure (`coordinator.js` `startHealthCheckPoller`); each node also announces liveness proactively over NATS (`storage/index.js`). Combined with replication, a single node failure doesn't lose data or block reads of already-synced replicas. |
 
+### Unit 3 — Synchronization
+
+All Unit 3 algorithms run **peer-to-peer between the storage nodes** (`backend/src/sync/`), over one NATS subject (`cluster.p2p`) that gives FIFO channels between every pair of nodes. The Coordinator only observes them (`coordinator/syncMonitor.js`) and relays operator commands; it is not a participant. Everything is visible live on the dashboard's **Synchronization** page (`/sync`), and `npm run test:sync` checks every algorithm automatically.
+
+| Concept | How it's demonstrated here |
+| :--- | :--- |
+| **Clock Synchronization** | **Berkeley algorithm** (`sync/berkeley.js`): the elected leader acts as time daemon. Every 30 s (or on demand) it polls every node's clock, estimates each reading **Cristian-style as `reading + RTT/2`**, discards outliers (fault-tolerant average), and sends every node the correction that moves it to the average. EC2 clocks are already NTP-synced to within milliseconds, so skew can be injected per node from the UI (or via `CLOCK_SKEW_MS` / `CLOCK_DRIFT_PPM`) to make the correction visible. The algorithm gives *agreement*, not accuracy: clocks converge on their mean, not on UTC. |
+| **Logical Clocks / Lamport's Algorithm** | `sync/clocks.js` `LamportClock`, applied by `sync/peerBus.js` to every node-to-node message: tick on send/local event, `max(local, msg) + 1` on receive. `(timestamp, nodeId)` gives a total order that Ricart-Agrawala uses to order requests. The trace view can sort events by Lamport time or by (skewed) physical time to show that physical timestamps can contradict causality, while Lamport order cannot. |
+| **Vector Algorithm (Vector Clocks)** | `sync/clocks.js` `VectorClock`, carried on every message alongside the Lamport time. Selecting two events in the trace shows whether one **happened-before** the other or whether they are **concurrent**, which Lamport timestamps alone cannot tell. |
+| **Global State** | **Chandy-Lamport snapshot** (`sync/snapshot.js`): the initiator records its state and sends MARKERs; each node records its state on its first marker and records each incoming channel until that channel's marker arrives. The result (local states + in-flight channel messages) is checked by the Coordinator for a **consistent cut** (`V_i[j] ≤ V_j[j]` for all i, j). |
+| **Election Algorithms** | **Bully algorithm** (`sync/election.js`): the highest-ranked live node becomes leader. Elections start at node startup, when the leader's beacons stop, or on operator request. A recovered higher-ranked node "bullies" its way back. The leader is the Berkeley time daemon. |
+| **Mutual Exclusion Algorithms** | **Ricart-Agrawala** (`sync/mutex.js`), with no central lock server: a node broadcasts a Lamport-stamped REQUEST and enters once all live peers have replied. Peers defer their reply while they hold the lock or have an older request. The protected critical section is a cluster-wide **integrity scrub** (re-hash every stored file), run one node at a time so the other nodes keep full disk throughput for downloads. The dashboard checks the safety property (at most one holder) live. Peers declared dead by the beacon protocol are not waited for. *(Compare: the Coordinator's existing keyed `Mutex`/`RWLock` in `utils/concurrency.js` is a centralized mutual exclusion scheme.)* |
+| **Beacon Protocol** | `sync/beacon.js`: every node broadcasts a sequence-numbered beacon every 2 s, and each node builds **its own** membership view (ALIVE → SUSPECT → DEAD after 3 missed beacons) instead of relying on the Coordinator. Failure detection uses the monotonic clock, so clock skew/corrections can't cause false suspicions. A DEAD leader triggers re-election, and a DEAD peer is dropped from mutex/snapshot waits. |
+| **Lodha & Kshemkalyani's fair mutual exclusion** *(self-study)* | **Not implemented; described for comparison.** It refines Ricart-Agrawala: each node keeps a local queue of concurrent requests ordered by timestamp. A REQUEST received from a concurrently requesting node with a later timestamp itself counts as that node's permission, and a FLUSH message sent on exit can stand in for several replies. This cuts messages per critical-section entry from exactly 2(N−1) to between N−1 and 2(N−1) while granting requests in the same timestamp order (fairness). Our implementation is the baseline it improves on. |
+| **Knapp's classification of distributed deadlock detection** *(self-study)* | **Not implemented; analysed.** Knapp classifies detectors as *path-pushing*, *edge-chasing* (e.g. Chandy-Misra-Haas probes), *diffusing computation* and *global state detection*. The last of these is exactly what the Chandy-Lamport snapshot above provides: a wait-for graph recorded in a consistent cut could be checked for cycles. In this system there is no deadlock to detect, because Ricart-Agrawala guards a single resource and the Coordinator's locks are per-model and never nested, so no hold-and-wait cycle can form. |
+
+### Unit 4 — Emerging Distributed Paradigms
+
+| Concept | How it's demonstrated here |
+| :--- | :--- |
+| **Distributed File System** | The system itself: files are split into 64 KB chunks, stored on multiple storage nodes, replicated 3×, located through a metadata service (Coordinator + PostgreSQL), and integrity-checked with SHA-256. |
+| **Apache Hadoop (HDFS) case study** | The architecture mirrors HDFS: Coordinator ≈ **NameNode** (metadata, placement, routing), Storage Nodes ≈ **DataNodes** (store blocks and report via heartbeats), default **replication factor 3**, and pipelined replica copying between DataNodes (our P2P replication). |
+| **Distributed Object-Based Systems** | Each storage node exposes a remote object interface (`StorageService` in `proto/storage.proto`) invoked through generated gRPC stubs, the same pattern as Java RMI/CORBA remote method invocation. |
+| **Distributed Web-Based Systems** | Browser (React SPA) → REST/HTTP API → back-end services, a multi-tier web architecture. |
+| **AWS case study** | `deploy/aws/up.sh` deploys the cluster on AWS: 4 EC2 instances in **3 Availability Zones** of one VPC, a security group that allows cluster-internal traffic only, an Elastic IP, and a reserved ENI. `deploy/aws/demo-fault-tolerance.sh` powers instances off to demonstrate failure masking and recovery. |
+| **Kubernetes** | **Not used**, but the deployment uses the same building blocks: containerized services (Docker), declarative composition (`docker-compose`), restart policies (self-healing), and stateless coordinator vs stateful storage nodes. |
+| **Serverless, Megaport, Cloudflare** | **Not implemented**; case-study topics only. |
+| **Trade-offs in distributed databases** *(self-study)* | CAP in practice: reads are served by any live synced replica (availability), while replica status is tracked centrally, so a new upload needs the Coordinator and PostgreSQL to be reachable (consistency of metadata over partition tolerance). |
+
 ---
 
 ## Directory Structure
@@ -113,7 +153,17 @@ distributed-model-repository/
 │   │   ├── coordinator/
 │   │   │   ├── coordinator.js         # Core coordinator & stream manager
 │   │   │   ├── nodeSelector.js        # Node selection & balancing logic
-│   │   │   └── requestRouter.js       # Download routing algorithm
+│   │   │   ├── requestRouter.js       # Download routing algorithm
+│   │   │   └── syncMonitor.js         # Observes the nodes' Unit 3 sync layer
+│   │   ├── sync/                      # Unit 3: runs inside every storage node
+│   │   │   ├── clocks.js              # Physical, Lamport and vector clocks
+│   │   │   ├── peerBus.js             # Clock-stamped node-to-node messaging (NATS)
+│   │   │   ├── beacon.js              # Beacon protocol & membership
+│   │   │   ├── election.js            # Bully election
+│   │   │   ├── berkeley.js            # Berkeley clock synchronization
+│   │   │   ├── mutex.js               # Ricart-Agrawala mutual exclusion
+│   │   │   ├── snapshot.js            # Chandy-Lamport global snapshot
+│   │   │   └── syncAgent.js           # Wires the above into a storage node
 │   │   ├── storage/
 │   │   │   ├── storageNode.js         # Generic gRPC storage server
 │   │   │   ├── fileManager.js         # Local disk storage & directory isolation
@@ -152,14 +202,24 @@ distributed-model-repository/
 ├── scripts/
 │   ├── start-local.js                 # Starts Coordinator + 3 Nodes + UI locally
 │   ├── stop-local.js                  # Terminates cluster processes
-│   └── seed-sample-model.js           # Generates 5MB LLM weights & tests upload
+│   ├── seed-sample-model.js           # Generates 5MB LLM weights & tests upload
+│   └── test-sync.js                   # Automated checks of every Unit 3 algorithm
+├── deploy/
+│   ├── docker-compose.control.yml     # Control plane for the multi-machine deployment
+│   └── aws/                           # up.sh, down.sh, demo-fault-tolerance.sh
 ├── docker-compose.yml                 # Full cluster container orchestration
 └── README.md
 ```
 
 ---
 
-## Quick Start (Two Ways to Run)
+## Quick Start (Three Ways to Run)
+
+| Method | Best for | Synchronization page |
+| :--- | :--- | :--- |
+| 1. Native local run | Quick development, no Docker | ✗ No NATS broker, so nodes can't talk to each other |
+| 2. Docker Compose | Full feature set on one machine | ✓ |
+| 3. AWS (4 EC2 machines, 3 AZs) | Real distribution, fault-tolerance demo, viva | ✓ |
 
 ### Method 1: Native Local Run (Zero-Config)
 
@@ -211,6 +271,63 @@ docker compose down -v
 
 ---
 
+### Method 3: Deploy on AWS (Multi-Machine)
+
+`deploy/aws/up.sh` builds the whole cluster with one command. Each storage node gets its own machine, in its own Availability Zone:
+
+```
+                 Browser ──► :3000 dashboard / :4000 API   (Elastic IP)
+                         │
+        ┌────────────────▼──────────────────┐
+        │ dmr-control (t3.medium, AZ a)     │
+        │ coordinator · postgres · nats ·   │
+        │ frontend                          │
+        └──────┬──────────────┬─────────────┘
+               │  private IPs, one security group
+   ┌───────────▼──┐  ┌────────▼─────┐  ┌──────────────┐
+   │ dmr-node-1   │◄─►│ dmr-node-2   │◄─►│ dmr-node-3   │   P2P gRPC replication
+   │ AZ a  :5001  │  │ AZ b  :5002  │  │ AZ c  :5003  │   + NATS sync messages
+   └──────────────┘  └──────────────┘  └──────────────┘
+```
+
+**Prerequisites:** an AWS account with EC2 permissions, and this repository pushed to a **public** GitHub repo (the instances `git clone` it, so unpushed changes are not deployed).
+
+**Steps (AWS CloudShell, where the AWS CLI is already logged in):**
+1. Open the AWS Console, pick a region with at least 3 AZs (e.g. Mumbai `ap-south-1`), and open **CloudShell** (`>_` icon).
+2. Deploy:
+   ```bash
+   git clone https://github.com/aryan242005/Distributed-LLM-Store.git
+   cd Distributed-LLM-Store
+   bash deploy/aws/up.sh
+   ```
+   After about 10 minutes the script prints the dashboard URL (`http://<elastic-ip>:3000`), each machine's IP and AZ, and SSH commands.
+3. Run the fault-tolerance demo. It uploads a test model, powers off the primary node's EC2 instance and then a second one, verifies every download by SHA-256, shows beacon-based re-election, then brings the nodes back:
+   ```bash
+   bash deploy/aws/demo-fault-tolerance.sh          # pauses between steps
+   AUTO=1 bash deploy/aws/demo-fault-tolerance.sh   # runs straight through
+   ```
+4. Delete everything (instances, disks, Elastic IP, network interface, security group, key pair). Use the **same region**:
+   ```bash
+   bash deploy/aws/down.sh
+   ```
+
+**What `up.sh` creates:** a security group that exposes only ports 22 (your IP), 3000 and 4000, with all other traffic allowed only between cluster members; an SSH key saved as `deploy/aws/dmr-key.pem` (git-ignored); an Elastic IP; and 4 Ubuntu 24.04 instances that install Docker and start their role via user-data. Bootstrap logs are in `/var/log/dmr-bootstrap.log` on each instance, and node replicas are in `/opt/dmr-data`.
+
+**Cost:** roughly $55/month if left running. Stopping the instances still bills the disks and Elastic IP; only `down.sh` brings the cost to zero.
+
+---
+
+## Testing
+
+```bash
+npm run test:sync     # Unit 3 algorithms: 3 nodes in-process over an in-memory FIFO network
+npm run test:system   # End-to-end upload/replication/download test (starts its own nodes in-process)
+```
+
+`test:sync` checks Bully election, Berkeley convergence, Ricart-Agrawala safety and Lamport ordering, Chandy-Lamport consistency (including rejecting an inconsistent cut), re-election after a leader crash, and the leader returning after recovery.
+
+---
+
 ## REST API Reference
 
 | Method | Endpoint | Description |
@@ -226,6 +343,16 @@ docker compose down -v
 | `GET` | `/api/replicas` | List all replica mappings |
 | `GET` | `/api/logs` | Query distributed communication traces (gRPC & P2P) |
 | `GET` | `/api/events` | Query NATS system events |
+| `GET` | `/api/sync/status` | Per-node clocks, Lamport/vector time, leader, membership, mutex state |
+| `GET` | `/api/sync/trace` | Send/receive/internal events with Lamport + vector timestamps |
+| `GET` | `/api/sync/compare?a=&b=` | Happened-before / concurrent relation of two trace events |
+| `GET` | `/api/sync/clock-rounds` | Recent Berkeley rounds (offsets, RTTs, corrections) |
+| `POST` | `/api/sync/skew` | Inject clock skew into a node `{ nodeId, deltaMs }` |
+| `POST` | `/api/sync/clock-sync` | Ask the leader to run a Berkeley round now |
+| `POST` | `/api/sync/election` | Start a Bully election `{ nodeId? }` |
+| `POST` | `/api/sync/mutex` | Nodes request the critical section `{ nodeId? }` |
+| `POST` | `/api/sync/snapshot` | Start a Chandy-Lamport snapshot `{ nodeId? }` |
+| `GET` | `/api/sync/snapshots` | Recent snapshots with consistency check |
 
 ---
 
@@ -267,3 +394,10 @@ During evaluation or presentation:
    - Notice that identical chunk-streamed files with matching SHA-256 checksums exist across all 3 nodes.
 4. **Demonstrate Streamed Download**:
    - Download the model from the UI or API. The Coordinator queries the RequestRouter and streams the file chunks directly from an active node back to the client without buffering the full file into memory.
+5. **Demonstrate Synchronization (Unit 3)** on the **Synchronization** page (`/sync`). It needs NATS, so run it with Docker Compose or on AWS; the native local run has no NATS broker.
+   - **Election:** the leader card shows the highest-ranked node. Click *Elect from here* on `node-1` and follow ELECTION → ANSWER → COORDINATOR in the trace.
+   - **Clock sync:** click *+5 s skew* on a node and watch "vs coordinator" jump. Then click *Run Berkeley sync*: the round table shows each measured offset and RTT, and all clocks converge on the average.
+   - **Logical clocks:** with skew injected, switch the trace between *Lamport order* and *Physical-time order*. Select a SEND and its RECV (happened-before), then two events from different nodes with no messages between them (concurrent).
+   - **Mutual exclusion:** click *All nodes request now*. The log shows deferred replies and entries strictly in Lamport order, and the banner confirms at most one holder.
+   - **Global state:** click *Take snapshot* and show the local states, channel states, and the CONSISTENT CUT check.
+   - **Beacons + re-election on AWS:** run `deploy/aws/demo-fault-tolerance.sh`. When the leader's EC2 instance is powered off, the other nodes mark it DEAD after 3 missed beacons and elect a new leader; when it returns, it reclaims leadership.

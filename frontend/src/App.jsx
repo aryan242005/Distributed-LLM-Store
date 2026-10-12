@@ -9,6 +9,7 @@ import UploadModel from './pages/UploadModel';
 import StorageNodes from './pages/StorageNodes';
 import Replication from './pages/Replication';
 import Requests from './pages/Requests';
+import Synchronization from './pages/Synchronization';
 
 export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/nodes" element={<StorageNodes key={refreshKey} />} />
               <Route path="/replication" element={<Replication key={refreshKey} />} />
               <Route path="/requests" element={<Requests key={refreshKey} />} />
+              <Route path="/sync" element={<Synchronization key={refreshKey} />} />
             </Routes>
           </main>
         </div>

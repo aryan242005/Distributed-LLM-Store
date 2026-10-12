@@ -58,6 +58,28 @@ show_nodes() {
   curl -sf "$API/nodes" | jq -r '.data[] | "   \(.id)\t \(.status)\t \(.host):\(.port)"' | expand -t 10
 }
 
+# Bully invariant: once an election settles, the leader is the highest-ranked live node
+show_leader() {
+  local start=$SECONDS state leader highest views
+  while :; do
+    state=$(curl -sf "$API/sync/status" | jq -c '.data as $d
+      | ([$d.nodes[] | select(.reachable) | .nodeId] | sort_by(ltrimstr("node-") | tonumber)) as $live
+      | { leader: $d.leader, highest: ($live | last), views: ([$d.nodes[] | select(.reachable)
+          | "\(.nodeId) sees " + ([.membership[] | "\(.id)=\(.status)"] | join(" "))] | join(" | ")) }') || state='{}'
+    leader=$(jq -r '.leader // ""' <<<"$state"); highest=$(jq -r '.highest // ""' <<<"$state")
+    [ -n "$leader" ] && [ "$leader" = "$highest" ] && break
+    [ $((SECONDS - start)) -lt 30 ] || break
+    sleep 2
+  done
+  views=$(jq -r '.views // ""' <<<"$state")
+  [ -n "$views" ] && log "Beacon membership: $views"
+  if [ -n "$leader" ] && [ "$leader" = "$highest" ]; then
+    ok "Bully election: leader (Berkeley time daemon) is $leader, the highest-ranked live node"
+  else
+    log "Leader election still settling (leader: ${leader:-none}); see the Synchronization page"
+  fi
+}
+
 show_replicas() {
   printf '   %-8s %-8s %-8s %s\n' NODE ROLE REPLICA "NODE STATUS"
   curl -sf "$API/replicas/model/$MODEL_ID" \
@@ -158,6 +180,7 @@ power_off "$PRIMARY"
 log "Waiting for heartbeat-based failure detection"
 wait_node "$PRIMARY" OFFLINE
 show_nodes
+show_leader
 download_and_verify "Download with primary down"
 [ "$LAST_SERVING" != "$PRIMARY" ] || fail "Download was routed to the OFFLINE primary"
 ok "Request was transparently re-routed away from the failed primary"
@@ -170,6 +193,7 @@ step "STEP 3: Crash a SECOND node ($SECOND) - only 1 of 3 copies left"
 power_off "$SECOND"
 wait_node "$SECOND" OFFLINE
 show_nodes
+show_leader
 show_replicas
 download_and_verify "Download with 2 of 3 nodes down"
 pause
@@ -182,6 +206,7 @@ log "Nodes reboot, the storage container restarts and re-registers over NATS"
 wait_node "$PRIMARY" ONLINE
 wait_node "$SECOND" ONLINE
 show_nodes
+show_leader
 show_replicas
 log "Downloading 3 times to show round-robin load balancing across recovered replicas"
 SERVED=()
@@ -200,7 +225,9 @@ cat <<EOF
   - Failure masking   : downloads kept working with 1 and then 2 of 3 machines down
   - Data integrity    : every download matched the original SHA-256
   - Recovery          : restarted nodes re-registered over NATS and served their replicas again
+  - Beacons + Bully   : nodes detected the crash from missed beacons themselves and kept the
+                        highest-ranked live node as leader (a recovered node-3 reclaims it)
  Known limitation: if all 3 replica nodes are down the model is unavailable, and lost
  replicas are not automatically re-created on other nodes.
- Open http://$EIP:3000 -> Requests & Logs to show the gRPC/NATS trace of the whole demo.
+ Open http://$EIP:3000 -> Requests & Logs and Synchronization to show the trace of the whole demo.
 EOF

@@ -64,7 +64,7 @@
         "used_storage_bytes": 90888945,
         "available_storage_bytes": 107283293455,
         "stored_models_count": 1,
-        "last_heartbeat": "2026-09-01T18:07:40.465Z",
+        "last_heartbeat": "2026-10-12T17:27:50.446Z",
         "created_at": "2026-08-30T16:06:37.347Z"
       }
     ],
@@ -79,7 +79,7 @@
         "used_storage_bytes": 90888945,
         "available_storage_bytes": 107283293455,
         "stored_models_count": 1,
-        "last_heartbeat": "2026-09-01T18:07:40.469Z",
+        "last_heartbeat": "2026-10-12T17:27:50.450Z",
         "created_at": "2026-08-30T16:06:37.347Z"
       }
     ],
@@ -94,7 +94,7 @@
         "used_storage_bytes": 90888945,
         "available_storage_bytes": 107283293455,
         "stored_models_count": 1,
-        "last_heartbeat": "2026-09-01T18:07:40.472Z",
+        "last_heartbeat": "2026-10-12T17:27:50.453Z",
         "created_at": "2026-08-30T16:06:37.347Z"
       }
     ]

@@ -5,6 +5,7 @@ const config = require('../config/config');
 const { initDatabase } = require('../database/connection');
 const natsClient = require('../communication/nats/natsClient');
 const coordinator = require('../coordinator/coordinator');
+const syncMonitor = require('../coordinator/syncMonitor');
 
 // Routes
 const modelsRouter = require('./routes/models');
@@ -13,6 +14,7 @@ const replicasRouter = require('./routes/replicas');
 const logsRouter = require('./routes/logs');
 const eventsRouter = require('./routes/events');
 const dashboardRouter = require('./routes/dashboard');
+const syncRouter = require('./routes/sync');
 
 const app = express();
 
@@ -52,6 +54,7 @@ app.use('/api/replicas', replicasRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/sync', syncRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -75,6 +78,9 @@ async function startServer() {
 
   // 3. Initialize Coordinator
   await coordinator.init();
+
+  // 4. Observe the storage nodes' synchronization layer (Unit 3)
+  syncMonitor.init();
 
   const port = config.coordinator.port;
   const host = config.coordinator.host;

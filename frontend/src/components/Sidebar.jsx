@@ -8,7 +8,8 @@ import {
   Copy,
   Terminal,
   Activity,
-  Cpu
+  Cpu,
+  Clock
 } from 'lucide-react';
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
   { name: 'Storage Nodes', path: '/nodes', icon: HardDrive },
   { name: 'Replication', path: '/replication', icon: Copy },
   { name: 'Requests & Logs', path: '/requests', icon: Terminal },
+  { name: 'Synchronization', path: '/sync', icon: Clock },
 ];
 
 export default function Sidebar() {

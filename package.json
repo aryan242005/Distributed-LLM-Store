@@ -9,6 +9,7 @@
     "seed": "node scripts/seed-sample-model.js",
     "stop": "node scripts/stop-local.js",
     "test:system": "node scripts/test-system.js",
+    "test:sync": "node scripts/test-sync.js",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down -v"
   },
