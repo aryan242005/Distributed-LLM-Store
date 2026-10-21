@@ -47,6 +47,29 @@ Two kinds of traffic flow between the storage nodes:
 
 ---
 
+## Run on Kubernetes (local cluster)
+
+The basic Kubernetes deployment is in `deploy/kubernetes.yaml`. It starts PostgreSQL, NATS, the coordinator, three persistent storage nodes, and the dashboard. It expects a local Kubernetes cluster with a default StorageClass (for example Docker Desktop Kubernetes or Minikube) and Docker images built on the same machine/cluster.
+
+From the project root, build the images and apply the manifest:
+
+```bash
+docker build -t ds-project-backend:local -f backend/Dockerfile .
+docker build -t ds-project-frontend:local --build-arg VITE_API_URL=http://localhost:30400/api -f frontend/Dockerfile .
+kubectl apply -f deploy/kubernetes.yaml
+kubectl rollout status deployment/postgres
+kubectl rollout status deployment/nats
+kubectl rollout status deployment/coordinator
+kubectl rollout status deployment/node-1
+kubectl rollout status deployment/node-2
+kubectl rollout status deployment/node-3
+kubectl rollout status deployment/frontend
+```
+
+Open the dashboard at `http://localhost:30300` and check the coordinator at `http://localhost:30400/api/health`. The frontend image embeds the coordinator URL at build time; if the cluster is reached through a different host, rebuild it with `VITE_API_URL` set to that host's port `30400`.
+
+The database password in this starter manifest is `postgres`; change the `dmr-postgres` Secret before using it beyond a local demo. Model files are stored in separate 20Gi claims for each node, and PostgreSQL uses its own 2Gi claim. Remove the deployment with `kubectl delete -f deploy/kubernetes.yaml` (PVCs are retained by Kubernetes unless explicitly deleted).
+
 ## Key Distributed Systems Concepts Demonstrated
 
 1. **Coordinator-Worker Architecture**:

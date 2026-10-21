@@ -1,0 +1,17 @@
+# Dependencies and generated frontend output
+**/node_modules
+**/dist
+**/build
+
+# Runtime data is bind-mounted by Compose; keep local model files out of build context
+storage/
+
+# Repository metadata and local configuration
+.git/
+.env
+.env.*
+
+# Logs and operating-system files
+*.log
+.DS_Store
+Thumbs.db
